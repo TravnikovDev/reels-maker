@@ -16,15 +16,19 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/audiobuffer-to-wav": "^1.0.2",
     "@types/ffprobe-static": "^2.0.1",
     "@types/fluent-ffmpeg": "^2.1.21",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.2"
   },
   "dependencies": {
+    "@types/webaudioapi": "^0.0.27",
+    "audiobuffer-to-wav": "^1.0.0",
     "ffmpeg-static": "^5.1.0",
     "ffprobe-static": "^3.1.0",
     "fluent-ffmpeg": "^2.1.2",
-    "sharp": "^0.32.0"
+    "sharp": "^0.32.0",
+    "web-audio-api": "^0.2.2"
   }
 }
