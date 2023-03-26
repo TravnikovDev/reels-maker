@@ -65,7 +65,7 @@ export async function concatenateWithCrossfade(
 
     command
       .complexFilter([filterChain, finalFilter])
-      .outputOptions("-map", "[v]", "-map", "[a]")
+      .outputOptions("-map [v]", "-map [a]")
       .videoCodec("libx264")
       .audioCodec("aac")
       .format("mp4")
