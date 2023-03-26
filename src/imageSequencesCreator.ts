@@ -9,7 +9,7 @@ ffmpeg.setFfmpegPath(`${ffmpegStatic}`);
 export async function createImageSequences(
   imagePaths: string[],
   audioPath: string,
-  frameDurations: number[],
+  frameDurations: number,
   outputPath: string,
   transitionDuration: number
 ): Promise<void> {
@@ -19,13 +19,13 @@ export async function createImageSequences(
     imagePaths.forEach((imagePath, index) => {
       command
         .input(imagePath)
-        .duration(frameDurations[index] + transitionDuration);
+        .duration(frameDurations + transitionDuration);
     });
 
     const filterComplex = imagePaths
       .map((_imagePath, index) => {
         if (index === 0) return "";
-        const firstFrame = index * frameDurations[index];
+        const firstFrame = index * frameDurations;
         return `[${
           index - 1
         }:v][${index}:v]blend=all_expr='A*(if(gte(T,${transitionDuration}),1,T/${transitionDuration}))+B*(1-(if(gte(T,${transitionDuration}),1,T/${transitionDuration})))'[v${index}];[v${
