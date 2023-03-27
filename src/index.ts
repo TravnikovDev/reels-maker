@@ -1,71 +1,86 @@
+import * as path from "path";
 import * as fs from "fs";
 import { getAudioPeakTimecodes } from "./audioAnalyzer";
 import { prepareImages } from "./imagePreparer";
-import { createImageSequences } from "./imageSequencesCreator";
-import { concatenateVideoSegments } from "./videoConcatenator";
+import { createVideoSegment, concatVideoSegments } from "./videoCreator";
 
-async function main() {
-  const imagePaths = [
-    "assets/images/image1.jpg",
-    "assets/images/image2.jpg",
-    "assets/images/image3.jpg",
-  ];
-  const audioPath = "assets/audio/audio.mp3";
+const minTimeDiff = 0.2;
+const width = 1080;
+const height = 1920;
+const outputDir = "output/resized";
 
-  const outputFolder = "output";
-  const videoSegmentsOutputFolder = "video_segments";
+async function createReels(
+  inputAudioPath: string,
+  inputImageDir: string,
+  outputVideoPath: string
+): Promise<void> {
+  try {
+    const peakTimecodes = await getAudioPeakTimecodes(
+      inputAudioPath,
+      minTimeDiff
+    );
+    console.log("Peak timecodes:", peakTimecodes);
 
-  // Analyze audio and find peak timecodes
-  const peakTimecodes = await getAudioPeakTimecodes(audioPath);
-  console.log("Peak timecodes:", peakTimecodes);
+    const preparedImages = await prepareImages(
+      inputImageDir,
+      width,
+      height,
+      outputDir
+    );
+    console.log("Prepared images:", preparedImages);
 
-  // Resize and prepare images
-  const resizedImagePaths = await prepareImages(
-    imagePaths,
-    1080,
-    1920,
-    outputFolder
-  );
-  console.log("Resized images:", resizedImagePaths);
+    const segmentPaths: string[] = [];
 
-  // Create video segments
-  const videoSegmentPaths: string[] = [];
-  for (let i = 0; i < peakTimecodes.length - 1; i++) {
-    const imagePath = resizedImagePaths[i % resizedImagePaths.length];
-    const startTime = peakTimecodes[i];
-    const endTime = peakTimecodes[i + 1];
-    const duration = endTime - startTime;
-    const videoSegmentPath = `${videoSegmentsOutputFolder}/segment_${i}.mp4`;
-
-    // Create a video segment with the specified image and duration
-    await createImageSequences(
-      [imagePath],
-      audioPath,
-      duration,
-      videoSegmentPath,
-      0.2
+    const videoSegments = await Promise.all(
+      peakTimecodes.map(async (startTime, index) => {
+        const inputImagePath = preparedImages[index];
+        if (inputImagePath) {
+          const videoSegmentPath = path.join(outputDir, `segment_${index}.mp4`);
+          await createVideoSegment(
+            inputImagePath,
+            inputAudioPath,
+            startTime,
+            peakTimecodes[index + 1],
+            videoSegmentPath
+          );
+          return videoSegmentPath;
+        }
+      })
     );
 
-    videoSegmentPaths.push(videoSegmentPath);
+    /* for (let i = 0; i < peakTimecodes.length - 1; i++) {
+      const startTime = peakTimecodes[i];
+      const endTime = peakTimecodes[i + 1];
+
+      const segmentPath = `output/segment_${i}.mp4`;
+      segmentPaths.push(segmentPath);
+
+      await createVideoSegment(
+        preparedImagePaths[i % preparedImagePaths.length],
+        inputAudioPath,
+        startTime,
+        endTime,
+        segmentPath
+      );
+    } */
+
+    console.log(videoSegments, outputVideoPath);
+    await concatVideoSegments(videoSegments, outputVideoPath);
+
+    // Clean up the segments
+    segmentPaths.forEach((segmentPath) => {
+      fs.unlinkSync(segmentPath);
+    });
+  } catch (error) {
+    console.error("Error during Reels creation:", error);
   }
-
-  // Concatenate video segments with transitions
-  const finalOutputPath = "output/final_reel.mp4";
-  const transitionDuration = 1; // Duration of the transition in seconds
-  await concatenateVideoSegments(
-    videoSegmentPaths,
-    transitionDuration,
-    finalOutputPath
-  );
-
-  console.log("Final Reel created:", finalOutputPath);
-
-  // Cleanup: remove temporary video segments and list files
-  videoSegmentPaths.forEach((segmentPath) => {
-    fs.unlinkSync(segmentPath);
-  });
 }
 
-main()
-  .then(() => console.log("Reels creation complete"))
-  .catch((error) => console.error("Error during Reels creation:", error));
+(async () => {
+  const inputAudioPath = "assets/audio/audio.mp3";
+  const inputImageDir = "assets/images";
+  const outputVideoPath = "output/reels_video.mp4";
+
+  await createReels(inputAudioPath, inputImageDir, outputVideoPath);
+  console.log("Reels video created:", outputVideoPath);
+})();
