@@ -1,9 +1,10 @@
-import * as fs from "fs";
 import * as path from "path";
-import { promisify } from "util";
-import { exec } from "child_process";
+import * as fs from "fs";
+import ffmpeg from "fluent-ffmpeg";
+import ffmpegStatic from "ffmpeg-static";
 
-const execAsync = promisify(exec);
+// Set the path to the FFmpeg binary
+ffmpeg.setFfmpegPath(`${ffmpegStatic}`);
 
 const width = 1080;
 const height = 1920;
@@ -15,39 +16,61 @@ async function createVideoSegment(
   endTime: number,
   outputPath: string
 ): Promise<void> {
-  const duration = endTime - startTime;
+  return new Promise<void>((resolve, reject) => {
+    const duration = endTime - startTime;
 
-  const command = `-y -i "${imagePath}" -i "${audioPath}" -filter_complex "[0:v]scale=${width}:${height},setsar=1,fps=30[img];[1:a]atrim=start=${startTime}:end=${endTime},asetpts=PTS-STARTPTS[aud]" -map "[img]" -map "[aud]" -t ${duration} -strict -2 "${outputPath}"`;
+    console.info(imagePath, audioPath, startTime, endTime, outputPath);
 
-  try {
-    await execAsync(`ffmpeg ${command}`);
-  } catch (error) {
-    console.error("Error during video segment creation:", error);
-    throw error;
-  }
+    ffmpeg()
+      .input(imagePath)
+      .inputOptions(["-loop", "1"])
+      .input(audioPath)
+      .inputOptions([`-ss ${startTime}`, `-t ${duration}`])
+      .complexFilter(
+        [
+          `[0:v]scale=${width}:${height},setsar=1,fps=60[img]`,
+          `[1:a]asetpts=PTS-STARTPTS[aud]`,
+        ],
+        ["img", "aud"]
+      )
+      .outputOptions(["-map", "[img]", "-map", "[aud]", "-strict", "-2"])
+      .output(outputPath)
+      .on("error", (err) => {
+        console.error("Error during video segment creation:", err);
+        reject(err);
+      })
+      .on("end", () => {
+        resolve();
+      })
+      .run();
+  });
 }
 
 async function concatVideoSegments(
-  segmentPaths: string[],
+  segmentPaths: (string | undefined)[],
   outputPath: string
 ): Promise<void> {
-  const fileListPath = path.join(path.dirname(outputPath), "filelist.txt");
+  return new Promise<void>((resolve, reject) => {
+    const command = ffmpeg();
 
-  try {
-    const fileListContent = segmentPaths
-      .map((segmentPath) => `file '${segmentPath}'`)
-      .join("\n");
-    fs.writeFileSync(fileListPath, fileListContent);
+    segmentPaths.forEach((segmentPath) => {
+      if (segmentPath) {
+        command.addInput(segmentPath);
+      }
+    });
 
-    const command = `-y -f concat -safe 0 -i "${fileListPath}" -c copy "${outputPath}"`;
-    await execAsync(`ffmpeg ${command}`);
-  } catch (error) {
-    console.error("Error during video concatenation:", error);
-    throw error;
-  } finally {
-    // Clean up the file list
-    fs.unlinkSync(fileListPath);
-  }
+    command
+      .concat(outputPath)
+      .outputOptions("-c", "copy")
+      .on("error", (err) => {
+        console.error("Error during video concatenation:", err);
+        reject(err);
+      })
+      .on("end", () => {
+        resolve();
+      })
+      .run();
+  });
 }
 
 export { createVideoSegment, concatVideoSegments };
