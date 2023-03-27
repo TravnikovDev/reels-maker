@@ -74,9 +74,9 @@ async function createReels(
     await concatVideoSegments(videoSegments, outputVideoPath);
 
     // Clean up the segments
-    // segmentPaths.forEach((segmentPath) => {
-    //   fs.unlinkSync(segmentPath);
-    // });
+    segmentPaths.forEach((segmentPath) => {
+      fs.unlinkSync(segmentPath);
+    });
   } catch (error) {
     console.error("Error during Reels creation:", error);
   }
