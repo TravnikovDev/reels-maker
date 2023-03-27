@@ -31,22 +31,28 @@ async function createReels(
 
     const segmentPaths: string[] = [];
 
-    const videoSegments = await Promise.all(
-      peakTimecodes.map(async (startTime, index) => {
-        const inputImagePath = preparedImages[index];
-        if (inputImagePath) {
-          const videoSegmentPath = path.join(outputDir, `segment_${index}.mp4`);
-          await createVideoSegment(
-            inputImagePath,
-            inputAudioPath,
-            startTime,
-            peakTimecodes[index + 1],
-            videoSegmentPath
-          );
-          return videoSegmentPath;
-        }
-      })
+    let videoSegments = await Promise.all(
+      peakTimecodes
+        .map(async (startTime, index) => {
+          const inputImagePath = preparedImages[index];
+          if (inputImagePath) {
+            const videoSegmentPath = path.join(
+              outputDir,
+              `segment_${index}.mp4`
+            );
+            await createVideoSegment(
+              inputImagePath,
+              inputAudioPath,
+              startTime,
+              peakTimecodes[index + 1],
+              videoSegmentPath
+            );
+            return videoSegmentPath;
+          }
+        })
     );
+
+    videoSegments = videoSegments.filter((item) => item)
 
     /* for (let i = 0; i < peakTimecodes.length - 1; i++) {
       const startTime = peakTimecodes[i];
@@ -68,9 +74,9 @@ async function createReels(
     await concatVideoSegments(videoSegments, outputVideoPath);
 
     // Clean up the segments
-    segmentPaths.forEach((segmentPath) => {
-      fs.unlinkSync(segmentPath);
-    });
+    // segmentPaths.forEach((segmentPath) => {
+    //   fs.unlinkSync(segmentPath);
+    // });
   } catch (error) {
     console.error("Error during Reels creation:", error);
   }

@@ -1,10 +1,12 @@
 import * as path from "path";
 import * as fs from "fs";
 import ffmpeg from "fluent-ffmpeg";
-import ffmpegStatic from "ffmpeg-static";
+import ffmpegStatic from 'ffmpeg-static';
+import ffprobeStatic from 'ffprobe-static';
 
 // Set the path to the FFmpeg binary
 ffmpeg.setFfmpegPath(`${ffmpegStatic}`);
+ffmpeg.setFfprobePath(`${ffprobeStatic}`);
 
 const width = 1080;
 const height = 1920;
@@ -14,26 +16,34 @@ async function createVideoSegment(
   audioPath: string,
   startTime: number,
   endTime: number,
-  outputPath: string
+  outputPath: string,
+  transitionDuration: number = 0.2
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const duration = endTime - startTime;
+    const inputDuration = duration + transitionDuration;
 
     console.info(imagePath, audioPath, startTime, endTime, outputPath);
 
     ffmpeg()
       .input(imagePath)
-      .inputOptions(["-loop", "1"])
+      .loop()
+      .inputOptions('-t', inputDuration.toString())
       .input(audioPath)
-      .inputOptions([`-ss ${startTime}`, `-t ${duration}`])
-      .complexFilter(
-        [
-          `[0:v]scale=${width}:${height},setsar=1,fps=60[img]`,
-          `[1:a]asetpts=PTS-STARTPTS[aud]`,
-        ],
-        ["img", "aud"]
-      )
-      .outputOptions(["-map", "[img]", "-map", "[aud]", "-strict", "-2"])
+      .inputOptions('-ss', startTime.toString())
+      .inputOptions('-t', duration.toString())
+      // .complexFilter(
+      //   [
+      //     `[0:v]scale=${width}:${height},setsar=1,fps=60[img]`,
+      //     // `[1:a]asetpts=PTS-STARTPTS[aud]`,
+      //     // `[1:a]afade=t=in:st=0:d=${transitionDuration}[aout]`
+      //   ],
+      //   // ["vout", "aout"]
+      // )
+      // .outputOptions(["-map", "[img]", "-map", "[aud]", "-strict", "-2"])
+      .outputOptions('-c:v', 'libx264')
+      .outputOptions('-c:a', 'aac')
+      .outputOptions('-movflags', '+faststart')
       .output(outputPath)
       .on("error", (err) => {
         console.error("Error during video segment creation:", err);
