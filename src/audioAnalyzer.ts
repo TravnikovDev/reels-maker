@@ -5,6 +5,7 @@ import * as util from "util";
 import { exec } from "child_process";
 
 const execPromise = util.promisify(exec);
+const framesInSecond = 10;
 
 export async function getAudioPeakTimecodes(
   audioPath: string,
@@ -13,25 +14,25 @@ export async function getAudioPeakTimecodes(
   console.info(audioPath);
   try {
     const { stdout } = await execPromise(
-      `audiowaveform -i "${audioPath}" --pixels-per-second 10 -b 8 -o - --output-format json`
+      `audiowaveform -i "${audioPath}" --pixels-per-second ${framesInSecond} -b 8 -o - --output-format json`
     );
     const samples = JSON.parse(stdout).data;
     const absoluteAmplitude: Array<number> = [];
     console.info(samples);
 
-    for (let i = 0; i < samples.length - 2; i += 2) {
-      absoluteAmplitude.push(Math.abs(samples[i]) + Math.abs(samples[i + 1]));
+    for (let i = 0; i < samples.length - 1; i += 2) {
+      absoluteAmplitude.push(Math.abs(samples[i]));
     }
 
     const maxAmplitude = Math.max(...absoluteAmplitude);
-    const peakThreshold = parseInt(`${maxAmplitude * 0.7}`);
+    const peakThreshold = parseInt(`${maxAmplitude * 0.96}`);
 
     let peakTimecodes: number[] = [];
     let lastPeakTime = -minTimeDiff;
 
     for (let i = 0; i < absoluteAmplitude.length; i++) {
       console.info(i);
-      const currentTime = i / 10;
+      const currentTime = i / framesInSecond;
 
       if (absoluteAmplitude[i] >= peakThreshold) {
         console.info(i, absoluteAmplitude[i], peakThreshold);
