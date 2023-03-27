@@ -9,7 +9,7 @@ async function createVideoSegment(
   startTime: number,
   endTime: number,
   outputPath: string,
-  transitionDuration: number = 0.2
+  transitionDuration: number = 0.05
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const duration = endTime - startTime;

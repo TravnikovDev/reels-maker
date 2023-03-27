@@ -1,10 +1,10 @@
 import * as path from "path";
 import * as fs from "fs";
-import { getAudioPeakTimecodes } from "./audioAnalyzer";
+import { audioCut, getAudioPeakTimecodes } from "./audioAnalyzer";
 import { prepareImages } from "./imagePreparer";
 import { createVideoSegment, concatVideoSegments } from "./videoCreator";
 
-const minTimeDiff = 0.2;
+const minTimeDiff = 0.1;
 const width = 1080;
 const height = 1920;
 const outputDir = "output/resized";
@@ -15,6 +15,11 @@ async function createReels(
   outputVideoPath: string
 ): Promise<void> {
   try {
+
+    await audioCut().catch((err) => {
+      console.error('Audio cut:', err);
+    });
+
     const peakTimecodes = await getAudioPeakTimecodes(
       inputAudioPath,
       minTimeDiff
@@ -83,7 +88,7 @@ async function createReels(
 }
 
 (async () => {
-  const inputAudioPath = "assets/audio/audio.mp3";
+  const inputAudioPath = "output/trimmed_audio.mp3";
   const inputImageDir = "assets/images";
   const outputVideoPath = "output/reels_video.mp4";
 
