@@ -1,12 +1,4 @@
-import * as path from "path";
-import * as fs from "fs";
 import ffmpeg from "fluent-ffmpeg";
-import ffmpegStatic from "ffmpeg-static";
-import ffprobeStatic from "ffprobe-static";
-
-// Set the path to the FFmpeg binary
-// ffmpeg.setFfmpegPath(`${ffmpegStatic}`);
-// ffmpeg.setFfprobePath(`${ffprobeStatic}`);
 
 const width = 1080;
 const height = 1920;
