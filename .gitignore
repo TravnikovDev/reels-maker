@@ -11,6 +11,8 @@ dist/
 *.swo
 *.swn
 *.bak
+.DS_Store
 
 # Temporary
 output/
+assets/
