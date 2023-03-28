@@ -5,7 +5,7 @@ import * as util from "util";
 import { exec } from "child_process";
 
 const execPromise = util.promisify(exec);
-const framesInSecond = 10;
+const framesInSecond = 2;
 
 export async function getAudioPeakTimecodes(
   audioPath: string,
@@ -25,7 +25,7 @@ export async function getAudioPeakTimecodes(
     }
 
     const maxAmplitude = Math.max(...absoluteAmplitude);
-    const peakThreshold = parseInt(`${maxAmplitude * 0.96}`);
+    const peakThreshold = parseInt(`${maxAmplitude * 0.98}`);
 
     let peakTimecodes: number[] = [];
     let lastPeakTime = -minTimeDiff;
