@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import * as readline from "readline";
 import ffmpeg from "fluent-ffmpeg";
 import * as util from "util";
@@ -102,6 +101,8 @@ export async function audioCut() {
   }
 
   await trimAudio(audioFilePath, outputAudioFilePath, startTime, endTime);
+
+  return endTime - startTime;
 }
 
 async function trimAudio(
@@ -125,5 +126,26 @@ async function trimAudio(
         resolve();
       })
       .run();
+  });
+}
+
+export async function addAudioToVideo(
+  videoInputPath: string,
+  audioInputPath: string,
+  outputPath: string
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    ffmpeg()
+      .input(videoInputPath)
+      .input(audioInputPath)
+      .videoCodec("copy")
+      .audioCodec("aac")
+      .on("error", (err) => {
+        reject(err);
+      })
+      .on("end", () => {
+        resolve();
+      })
+      .save(outputPath);
   });
 }

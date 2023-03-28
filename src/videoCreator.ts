@@ -33,7 +33,8 @@ async function createVideoSegment(
 
 async function concatVideoSegments(
   segmentPaths: (string | undefined)[],
-  outputPath: string
+  outputPath: string,
+  audioPath: string
 ): Promise<void> {
   try {
     return new Promise<void>((resolve, reject) => {
@@ -48,10 +49,13 @@ async function concatVideoSegments(
 
       command
         .on("error", function (err) {
-          console.log("An error occurred during concatVideoSegments: " + err.message);
+          console.log(
+            "An error occurred during concatVideoSegments: " + err.message
+          );
         })
         .on("end", function () {
           console.log("Merging finished !");
+          resolve();
         })
         .mergeToFile(outputPath, "output/temp");
     });
