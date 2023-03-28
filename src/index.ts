@@ -1,6 +1,10 @@
 import * as path from "path";
 import * as fs from "fs";
-import { audioCut, getAudioPeakTimecodes } from "./audioAnalyzer";
+import {
+  addAudioToVideo,
+  audioCut,
+  getAudioPeakTimecodes,
+} from "./audioAnalyzer";
 import { prepareImages } from "./imagePreparer";
 import { createVideoSegment, concatVideoSegments } from "./videoCreator";
 
@@ -10,6 +14,7 @@ import { createVideoSegment, concatVideoSegments } from "./videoCreator";
 // Накладывание видео в конце
 
 const minTimeDiff = 0.1;
+const transitionTime = 0.2;
 const width = 1080;
 const height = 1920;
 const outputDir = "output/resized";
@@ -20,7 +25,7 @@ async function createReels(
   outputVideoPath: string
 ): Promise<void> {
   try {
-    await audioCut().catch((err) => {
+    const duration = await audioCut().catch((err) => {
       console.error("Audio cut:", err);
     });
 
@@ -45,18 +50,32 @@ async function createReels(
     let videoSegments = await Promise.all(
       peakTimecodes.map(async (startTime, index) => {
         const inputImagePath = preparedImages[index];
-        console.info(inputImagePath);
         if (inputImagePath) {
-          const videoSegmentPath = path.join(outputDir, `segment_${index}.mp4`);
           if (peakTimecodes[index + 1]) {
+            const videoSegmentPath = path.join(
+              outputDir,
+              `segment_${index}.mp4`
+            );
             await createVideoSegment(
               inputImagePath,
               peakTimecodes[index + 1] - startTime,
               videoSegmentPath,
-              0.2
+              transitionTime
             );
+            return videoSegmentPath;
+          } else if (index == peakTimecodes.length - 1 && duration) {
+            const videoSegmentPath = path.join(
+              outputDir,
+              `segment_${index}.mp4`
+            );
+            await createVideoSegment(
+              inputImagePath,
+              duration - startTime,
+              videoSegmentPath,
+              transitionTime
+            );
+            return videoSegmentPath;
           }
-          return videoSegmentPath;
         }
       })
     );
@@ -64,7 +83,10 @@ async function createReels(
     console.log("Segments: ", videoSegments);
 
     console.log("Making video...");
-    await concatVideoSegments(videoSegments, outputVideoPath);
+    await concatVideoSegments(videoSegments, outputVideoPath, inputAudioPath);
+
+    console.log("Adding music piece...");
+    await addAudioToVideo(outputVideoPath, inputAudioPath, "output/reel.mp4");
 
     // Clean up the segments
     // videoSegments.forEach((path) => {
