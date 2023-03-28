@@ -8,13 +8,8 @@ import {
 import { prepareImages } from "./imagePreparer";
 import { createVideoSegment, concatVideoSegments } from "./videoCreator";
 
-// Опитимизация:
-// Обработка только нужного колличества видео
-// Обработка при помощи ffmpeg
-// Накладывание видео в конце
-
-const minTimeDiff = 0.1;
-const transitionTime = 0.2;
+const minTimeDiff = 0.3;
+const transitionTime = 0.1;
 const width = 1080;
 const height = 1920;
 const outputDir = "output/resized";
@@ -48,7 +43,7 @@ async function createReels(
 
     console.log("Making videos from images...");
     let videoSegments = await Promise.all(
-      peakTimecodes.map(async (startTime, index) => {
+      peakTimecodes.map(async (startTime: number, index: number) => {
         const inputImagePath = preparedImages[index];
         if (inputImagePath) {
           if (peakTimecodes[index + 1]) {
@@ -58,19 +53,20 @@ async function createReels(
             );
             await createVideoSegment(
               inputImagePath,
-              peakTimecodes[index + 1] - startTime,
+              Number((peakTimecodes[index + 1] - startTime).toFixed(3)),
               videoSegmentPath,
               transitionTime
             );
             return videoSegmentPath;
           } else if (index == peakTimecodes.length - 1 && duration) {
+            console.info("Last video:", startTime, duration);
             const videoSegmentPath = path.join(
               outputDir,
               `segment_${index}.mp4`
             );
             await createVideoSegment(
               inputImagePath,
-              duration - startTime,
+              Number((duration - startTime).toFixed(3)),
               videoSegmentPath,
               transitionTime
             );
@@ -79,7 +75,7 @@ async function createReels(
         }
       })
     );
-    videoSegments = videoSegments.filter((item) => item);
+    videoSegments = videoSegments.filter((item: any) => item);
     console.log("Segments: ", videoSegments);
 
     console.log("Making video...");
