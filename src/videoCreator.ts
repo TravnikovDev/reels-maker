@@ -6,6 +6,7 @@ async function createVideoSegment(
   outputPath: string,
   fadeDuration: number
 ): Promise<void> {
+  console.info(imagePath, duration, outputPath, fadeDuration);
   return new Promise<void>((resolve, reject) => {
     ffmpeg()
       .input(imagePath)
