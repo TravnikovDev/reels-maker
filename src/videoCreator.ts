@@ -1,54 +1,33 @@
 import ffmpeg from "fluent-ffmpeg";
 
-const width = 1080;
-const height = 1920;
-
 async function createVideoSegment(
   imagePath: string,
-  audioPath: string,
-  startTime: number,
-  endTime: number,
+  duration: number,
   outputPath: string,
-  transitionDuration: number = 0.05
+  fadeDuration: number
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    const duration = endTime - startTime;
-    const inputDuration = duration;// + transitionDuration;
-
-    console.info(imagePath, audioPath, startTime, endTime, outputPath);
-
-    try {
-      ffmpeg()
-        .input(imagePath)
-        .loop()
-        .inputOptions("-t", inputDuration.toString())
-        .input(audioPath)
-        .inputOptions("-ss", startTime.toString())
-        .inputOptions("-t", duration.toString())
-        // .complexFilter(
-        //   [
-        //     `[0:v]scale=${width}:${height},setsar=1,fps=60[img]`,
-        //     // `[1:a]asetpts=PTS-STARTPTS[aud]`,
-        //     // `[1:a]afade=t=in:st=0:d=${transitionDuration}[aout]`
-        //   ],
-        //   // ["vout", "aout"]
-        // )
-        // .outputOptions(["-map", "[img]", "-map", "[aud]", "-strict", "-2"])
-        .outputOptions("-c:v", "libx264")
-        .outputOptions("-c:a", "aac")
-        .outputOptions("-movflags", "+faststart")
-        .output(outputPath)
-        .on("error", (err) => {
-          console.error("Error during video segment creation:", err);
-          reject(err);
-        })
-        .on("end", () => {
-          resolve();
-        })
-        .run();
-    } catch (err) {
-      console.log("Error during segment creation: ", err);
-    }
+    ffmpeg()
+      .input(imagePath)
+      .loop(duration)
+      .inputOptions("-t", `${duration}`)
+      .videoFilters([
+        {
+          filter: "fade",
+          options: `t=in:st=0:d=${fadeDuration}`,
+        },
+        {
+          filter: "fade",
+          options: `t=out:st=${duration - fadeDuration}:d=${fadeDuration}`,
+        },
+      ])
+      .on("error", (err) => {
+        reject(err);
+      })
+      .on("end", () => {
+        resolve();
+      })
+      .save(outputPath);
   });
 }
 
@@ -69,24 +48,12 @@ async function concatVideoSegments(
 
       command
         .on("error", function (err) {
-          console.log("An error occurred: " + err.message);
+          console.log("An error occurred during concatVideoSegments: " + err.message);
         })
         .on("end", function () {
           console.log("Merging finished !");
         })
         .mergeToFile(outputPath, "output/temp");
-
-      // command
-      //   .concat(outputPath)
-      //   .outputOptions("-c", "copy")
-      //   .on("error", (err) => {
-      //     console.error("Error during video concatenation:", err);
-      //     reject(err);
-      //   })
-      //   .on("end", () => {
-      //     resolve();
-      //   })
-      //   .run();
     });
   } catch (err) {
     console.log("Error during concatenation: ", err);

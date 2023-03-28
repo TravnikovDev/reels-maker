@@ -4,6 +4,11 @@ import { audioCut, getAudioPeakTimecodes } from "./audioAnalyzer";
 import { prepareImages } from "./imagePreparer";
 import { createVideoSegment, concatVideoSegments } from "./videoCreator";
 
+// Опитимизация:
+// Обработка только нужного колличества видео
+// Обработка при помощи ffmpeg
+// Накладывание видео в конце
+
 const minTimeDiff = 0.1;
 const width = 1080;
 const height = 1920;
@@ -19,50 +24,52 @@ async function createReels(
       console.error("Audio cut:", err);
     });
 
+    console.log("Analyzing audio...");
     const peakTimecodes = await getAudioPeakTimecodes(
       inputAudioPath,
       minTimeDiff
     );
     console.log("Peak timecodes:", peakTimecodes);
 
+    console.log("Preparing images...");
     const preparedImages = await prepareImages(
       inputImageDir,
+      outputDir,
+      peakTimecodes.length,
       width,
-      height,
-      outputDir
+      height
     );
     console.log("Prepared images:", preparedImages);
 
-    const segmentPaths: string[] = [];
-
+    console.log("Making videos from images...");
     let videoSegments = await Promise.all(
       peakTimecodes.map(async (startTime, index) => {
         const inputImagePath = preparedImages[index];
+        console.info(inputImagePath);
         if (inputImagePath) {
           const videoSegmentPath = path.join(outputDir, `segment_${index}.mp4`);
           if (peakTimecodes[index + 1]) {
             await createVideoSegment(
               inputImagePath,
-              inputAudioPath,
-              startTime,
-              peakTimecodes[index + 1],
-              videoSegmentPath
+              peakTimecodes[index + 1] - startTime,
+              videoSegmentPath,
+              0.2
             );
           }
           return videoSegmentPath;
         }
       })
     );
-
     videoSegments = videoSegments.filter((item) => item);
+    console.log("Segments: ", videoSegments);
 
-    console.log(videoSegments, outputVideoPath);
+    console.log("Making video...");
     await concatVideoSegments(videoSegments, outputVideoPath);
 
     // Clean up the segments
-    segmentPaths.forEach((segmentPath) => {
-      fs.unlinkSync(segmentPath);
-    });
+    // videoSegments.forEach((path) => {
+    //   if (path) fs.unlinkSync(path);
+    // });
   } catch (error) {
     console.error("Error during Reels creation:", error);
   }
