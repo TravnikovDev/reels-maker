@@ -2,6 +2,13 @@ import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 
+function shuffleArray(array: any[]) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
 export async function prepareImages(
   inputDir: string,
   outputDir: string,
@@ -31,6 +38,8 @@ export async function prepareImages(
 
     imagesProcessed++;
   }
+
+  shuffleArray(imagePaths); // Shuffle the inputFiles array
 
   return imagePaths;
 }

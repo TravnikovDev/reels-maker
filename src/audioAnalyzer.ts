@@ -44,68 +44,6 @@ export async function getAudioPeakTimecodes(audioFilePath: string, minTimeDiff: 
   return peakTimecodes;
 }
 
-
-/* export async function getAudioPeakTimecodes(
-  audioPath: string,
-  minTimeDiff: number = 0.05
-): Promise<number[]> {
-  console.info(audioPath);
-  try {
-    const { stdout } = await execPromise(
-      `audiowaveform -i "${audioPath}" --pixels-per-second ${framesInSecond} -b 8 -o - --output-format json`
-    );
-    fs.writeFile("output/music.json", stdout, (err) => {
-      if (err) console.log(err);
-      else {
-        console.log("File written successfully\n");
-      }
-    });
-    const samples = JSON.parse(stdout).data;
-    const absoluteAmplitude: Array<number> = samples;
-    console.info(samples);
-
-    // for (let i = 0; i < samples.length; i += 1) {
-    //   absoluteAmplitude.push(Math.abs(samples[i]));
-    // }
-
-    const maxAmplitude = Math.min(...absoluteAmplitude);
-    const peakThreshold = parseInt(`${maxAmplitude * 0.98}`);
-
-    let peakTimecodes: number[] = [];
-    let lastPeakTime = -minTimeDiff;
-
-    for (let i = 0; i < absoluteAmplitude.length; i++) {
-      const currentTime = i / framesInSecond / 2;
-
-      if (absoluteAmplitude[i] <= peakThreshold) {
-        console.info(i, absoluteAmplitude[i], peakThreshold);
-      }
-
-      if (
-        absoluteAmplitude[i] <= peakThreshold &&
-        currentTime - lastPeakTime >= minTimeDiff
-      ) {
-        peakTimecodes.push(currentTime);
-        lastPeakTime = currentTime;
-      }
-    }
-
-    // Limit the number of peak timecodes to a maximum of 30
-    if (peakTimecodes.length > 30) {
-      const step = Math.floor(peakTimecodes.length / 30);
-      peakTimecodes = peakTimecodes.filter(
-        (_value, index) => index % step === 0
-      );
-    }
-
-    console.log("Peak timecodes:", peakTimecodes);
-    return peakTimecodes;
-  } catch (error) {
-    console.error("Error during audio analysis:", error);
-    throw error;
-  }
-} */
-
 export async function audioCut() {
   const rl = readline.createInterface({
     input: process.stdin,
