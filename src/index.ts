@@ -12,7 +12,7 @@ import { createSlidingVideo } from "./videoCreator";
 // Выбор папок с картинками
 // Ввод настройки промежутка
 
-const minTimeDiff = 0.3;
+const minTimeDiff = 1;
 const transitionTime = 0.15;
 const width = 1080;
 const height = 1920;
@@ -27,6 +27,9 @@ async function createReels(
     const duration = await audioCut().catch((err) => {
       console.error("Audio cut:", err);
     });
+    if (!duration) {
+      return;
+    }
 
     console.log("Analyzing audio...");
     const peakTimecodes = await getAudioPeakTimecodes(
@@ -46,11 +49,11 @@ async function createReels(
     console.log("Prepared images:", preparedImages);
 
     console.log("Making video...");
-    await createSlidingVideo(preparedImages, peakTimecodes, outputVideoPath);
+    await createSlidingVideo(preparedImages, peakTimecodes, outputVideoPath, duration);
     // await concatVideoSegments(videoSegments, outputVideoPath);
 
     console.log("Adding music piece...");
-    await addAudioToVideo(outputVideoPath, inputAudioPath, "output/reel.mp4");
+    await addAudioToVideo(outputVideoPath, inputAudioPath, "output/reel.mp4", duration);
 
   } catch (error) {
     console.error("Error during Reels creation:", error);

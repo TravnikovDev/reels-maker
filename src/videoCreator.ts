@@ -1,92 +1,78 @@
-import ffmpeg, { FfmpegCommand } from "fluent-ffmpeg";
+import ffmpeg from "fluent-ffmpeg";
 import { promises as fs } from "fs";
 import path from "path";
+import concat from "ffmpeg-concat";
 
 export async function createSlidingVideo(
   imagePaths: string[],
   durations: number[],
-  outputVideoPath: string
+  outputVideoPath: string,
+  duration: number
 ): Promise<void> {
-  // Create video segments with specified durations
-  const segmentPaths: string[] = [];
-  for (let i = 0; i < imagePaths.length; i++) {
-    const outputPath = path.join("output/resized", `segment_${i}.mp4`);
-    await new Promise<void>((resolve, reject) => {
-      ffmpeg(imagePaths[i])
-        .loop(durations[i])
-        .inputOptions(`-t ${durations[i]}`)
-        .videoCodec("libx264")
-        .output(outputPath)
-        .on("error", (err) => reject(err))
-        .on("end", () => {
-          segmentPaths.push(outputPath);
-          resolve();
-        })
-        .run();
-    });
-  }
+  // Create temporary video clips with the correct durations
+  const tempVideos = await createVideosFromImages(
+    imagePaths,
+    durations,
+    duration
+  );
 
-  // Add transitions between segments
-  const transitionPaths: string[] = [];
-  for (let i = 0; i < segmentPaths.length - 1; i++) {
-    const outputPath = path.join("output/resized", `transition_${i}.mp4`);
-    const transitionDuration = 0.1;
-    await new Promise<void>((resolve, reject) => {
-      console.info(`Duration: ${durations[i+1] - durations[i] - transitionDuration}`)
-      ffmpeg()
-        .input(segmentPaths[i])
-        .input(segmentPaths[i + 1])
-        .complexFilter(
-          [
-            {
-              filter: "xfade",
-              options: {
-                transition: i % 2 === 0 ? "slideright" : "slideleft",
-                duration: transitionDuration,
-                offset: durations[i+1] - durations[i] - transitionDuration,
-              },
-              inputs: ["0:v", "1:v"],
-              outputs: "xfade",
-            },
-          ],
-          "xfade"
-        )
-        .on("error", (err) => reject(err))
-        .on("end", () => {
-          transitionPaths.push(outputPath);
-          resolve();  
-        })
-        .saveToFile(outputPath);
-    });
-  }
+  // Concatenate video clips with transitions
+  await createTransitions(tempVideos, outputVideoPath);
 
-  await mergeSegments(transitionPaths, outputVideoPath);
+  // Cleanup temporary video files
+  // for (const tempVideo of tempVideos) {
+  //   await fs.unlink(tempVideo);
+  // }
 }
 
-async function mergeSegments(segmentPaths: string[], outputPath: string) {
-  // Concatenate segments using FFmpeg
-  const command = ffmpeg();
+async function createVideosFromImages(
+  imagePaths: string[],
+  durations: number[],
+  totalDuration: number
+): Promise<string[]> {
+  const tempVideos: string[] = [];
 
-  // Loop through the segment paths, adding each as an input
-  for (const segmentPath of segmentPaths) {
-    command.input(segmentPath);
+  for (let i = 0; i < imagePaths.length; i++) {
+    const tempVideoPath = path.join("output/temp", `temp_${i}.mp4`);
+    let videoDuration = durations[i + 1] - durations[i];
+    if (isNaN(videoDuration)) {
+      videoDuration = totalDuration - durations[i];
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg()
+        .input(imagePaths[i])
+        .loop(videoDuration)
+        .outputOptions("-t", `${videoDuration}`)
+        .outputOptions("-pix_fmt", "yuv420p")
+        .on("error", (err) => reject(err))
+        .on("end", () => {
+          console.info(
+            "Created video from: ",
+            imagePaths[i],
+            " and it's duration is ",
+            videoDuration
+          );
+          tempVideos.push(tempVideoPath);
+          resolve();
+        })
+        .save(tempVideoPath);
+    });
   }
 
-  console.info(segmentPaths);
-  // Build a complex filter using the 'concat' filter
-  const filter = `concat=n=${segmentPaths.length}:v=1:a=0[out]`;
+  return tempVideos;
+}
 
-  await new Promise<void>((resolve, reject) => {
-    command
-      .complexFilter(filter, ["out"])
-      .outputOptions("-pix_fmt", "yuv420p")
-      .on("error", (err) => reject(err))
-      .on("end", () => resolve())
-      .saveToFile(outputPath);
-  });
-
-  // Remove the temporary segment files
-  // for (const segmentPath of segmentPaths) {
-  //   await fs.unlink(segmentPath);
-  // }
+async function createTransitions(
+  videoPaths: string[],
+  outputVideoPath: string
+): Promise<void> {
+  await concat({
+    output: outputVideoPath,
+    videos: videoPaths,
+    transition: {
+      name: 'circleopen',
+      duration: 150
+    },
+  }).then(() => console.log("Concated..."));
 }
