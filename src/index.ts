@@ -3,7 +3,9 @@ import * as fs from "fs";
 import {
   addAudioToVideo,
   audioCut,
+  getAudioFiles,
   getAudioPeakTimecodes,
+  selectAudioFile,
 } from "./audioAnalyzer";
 import { prepareImages } from "./imagePreparer";
 import { createSlidingVideo } from "./videoCreator";
@@ -12,8 +14,7 @@ import { createSlidingVideo } from "./videoCreator";
 // Выбор папок с картинками
 // Ввод настройки промежутка
 
-const minTimeDiff = 1;
-const transitionTime = 0.15;
+const minTimeDiff = 0.3;
 const width = 1080;
 const height = 1920;
 const outputDir = "output/resized";
@@ -24,7 +25,9 @@ async function createReels(
   outputVideoPath: string
 ): Promise<void> {
   try {
-    const duration = await audioCut().catch((err) => {
+    const audioFiles = await getAudioFiles();
+    const audioFilePath = await selectAudioFile(audioFiles);
+    const duration = await audioCut(audioFilePath).catch((err) => {
       console.error("Audio cut:", err);
     });
     if (!duration) {
@@ -49,12 +52,21 @@ async function createReels(
     console.log("Prepared images:", preparedImages);
 
     console.log("Making video...");
-    await createSlidingVideo(preparedImages, peakTimecodes, outputVideoPath, duration);
+    await createSlidingVideo(
+      preparedImages,
+      peakTimecodes,
+      outputVideoPath,
+      duration
+    );
     // await concatVideoSegments(videoSegments, outputVideoPath);
 
     console.log("Adding music piece...");
-    await addAudioToVideo(outputVideoPath, inputAudioPath, "output/reel.mp4", duration);
-
+    await addAudioToVideo(
+      outputVideoPath,
+      inputAudioPath,
+      "output/reel.mp4",
+      duration
+    );
   } catch (error) {
     console.error("Error during Reels creation:", error);
   }

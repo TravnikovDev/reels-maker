@@ -1,5 +1,7 @@
 import * as readline from "readline";
 import ffmpeg from "fluent-ffmpeg";
+import path from "path";
+
 import * as util from "util";
 import * as fs from "fs";
 import { exec } from "child_process";
@@ -34,13 +36,20 @@ export async function getAudioPeakTimecodes(
   }
 
   // Define the threshold value
-  const threshold = 1.5 * Math.max(...movingAverages);
+  const threshold = 2 * Math.max(...movingAverages);
+  console.info("threshold - ", threshold);
 
   // Identify the points that exceed the threshold and apply the minimum time difference constraint
   const peakTimecodes: number[] = [];
   let lastPeakTime = -minTimeDiff;
   for (let i = 0; i < samples.length; i += 2) {
     const currentTime = i / (pixelsPerSecond * 2);
+    console.info(
+      "sample & threadsold: ",
+      Math.abs(samples[i]),
+      `${Math.abs(samples[i]) > threshold ? " > " : " < "}`,
+      threshold
+    );
     if (
       Math.abs(samples[i]) > threshold &&
       currentTime - lastPeakTime >= minTimeDiff
@@ -53,13 +62,12 @@ export async function getAudioPeakTimecodes(
   return peakTimecodes;
 }
 
-export async function audioCut() {
+export async function audioCut(audioFilePath: string) {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
-  const audioFilePath = "assets/audio/audio.mp3";
   const outputAudioFilePath = "output/trimmed_audio.mp3";
 
   const startTime = await new Promise<number>((resolve) => {
@@ -141,4 +149,40 @@ export async function addAudioToVideo(
       })
       .save(outputPath);
   });
+}
+
+export async function getAudioFiles(): Promise<string[]> {
+  const audioFiles = await fs.promises.readdir("assets/audio");
+  return audioFiles.filter((file) => /\.(mp3|wav)$/i.test(file));
+}
+
+export async function selectAudioFile(audioFiles: string[]): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  console.log("Available audio files:");
+  audioFiles.forEach((file, index) => {
+    console.log(`${index + 1}: ${file}`);
+  });
+
+  const selectedFile = await new Promise<number>((resolve) => {
+    rl.question("Select an audio file by entering its number: ", (answer) => {
+      const index = parseInt(answer);
+      if (isNaN(index) || index < 1 || index > audioFiles.length) {
+        console.error("Invalid selection. Please try again.");
+        return resolve(-1);
+      }
+      resolve(index - 1);
+    });
+  });
+
+  rl.close();
+
+  if (selectedFile === -1) {
+    return selectAudioFile(audioFiles);
+  }
+
+  return path.join("assets/audio", audioFiles[selectedFile]);
 }
