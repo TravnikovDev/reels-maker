@@ -7,7 +7,7 @@ import {
   getAudioPeakTimecodes,
   selectAudioFile,
 } from "./audioAnalyzer";
-import { prepareImages } from "./imagePreparer";
+import { getSubdirectories, prepareImages, promptImageSubfolderSelection } from "./imagePreparer";
 import { createSlidingVideo } from "./videoCreator";
 
 // Выбор музыки
@@ -73,10 +73,15 @@ async function createReels(
 }
 
 (async () => {
+
+   // Image subfolder selection
+   const imageDir = "assets/images";
+   const subdirs = await getSubdirectories(imageDir);
+   const selectedSubdir = await promptImageSubfolderSelection(subdirs);
+
   const inputAudioPath = "output/trimmed_audio.mp3";
-  const inputImageDir = "assets/images";
   const outputVideoPath = "output/reels_video.mp4";
 
-  await createReels(inputAudioPath, inputImageDir, outputVideoPath);
+  await createReels(inputAudioPath, selectedSubdir, outputVideoPath);
   console.log("Reels video created:", outputVideoPath);
 })();
