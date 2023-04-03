@@ -7,7 +7,10 @@ import { exec } from "child_process";
 const execPromise = util.promisify(exec);
 const pixelsPerSecond = 10;
 
-export async function getAudioPeakTimecodes(audioFilePath: string, minTimeDiff: number): Promise<number[]> {
+export async function getAudioPeakTimecodes(
+  audioFilePath: string,
+  minTimeDiff: number
+): Promise<number[]> {
   const { stdout } = await execPromise(
     `audiowaveform -i "${audioFilePath}" --pixels-per-second ${pixelsPerSecond} -b 8 -o - --output-format json`
   );
@@ -18,12 +21,15 @@ export async function getAudioPeakTimecodes(audioFilePath: string, minTimeDiff: 
   const movingAverages = [];
   for (let i = 0; i < samples.length - windowSize + 1; i += 2) {
     const windowSamples = samples.slice(i, i + windowSize * 2);
-    const sum = windowSamples.reduce((acc: number, curr: number, index: number) => {
-      if (index % 2 === 0) {
-        return acc + Math.abs(curr);
-      }
-      return acc;
-    }, 0);
+    const sum = windowSamples.reduce(
+      (acc: number, curr: number, index: number) => {
+        if (index % 2 === 0) {
+          return acc + Math.abs(curr);
+        }
+        return acc;
+      },
+      0
+    );
     movingAverages.push(sum / (windowSize * 2));
   }
 
@@ -35,7 +41,10 @@ export async function getAudioPeakTimecodes(audioFilePath: string, minTimeDiff: 
   let lastPeakTime = -minTimeDiff;
   for (let i = 0; i < samples.length; i += 2) {
     const currentTime = i / (pixelsPerSecond * 2);
-    if (Math.abs(samples[i]) > threshold && currentTime - lastPeakTime >= minTimeDiff) {
+    if (
+      Math.abs(samples[i]) > threshold &&
+      currentTime - lastPeakTime >= minTimeDiff
+    ) {
       peakTimecodes.push(currentTime);
       lastPeakTime = currentTime;
     }
@@ -114,7 +123,8 @@ async function trimAudio(
 export async function addAudioToVideo(
   videoInputPath: string,
   audioInputPath: string,
-  outputPath: string
+  outputPath: string,
+  audioDuration: number
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     ffmpeg()
@@ -122,6 +132,7 @@ export async function addAudioToVideo(
       .input(audioInputPath)
       .videoCodec("copy")
       .audioCodec("aac")
+      .outputOptions("-t", `${audioDuration}`)
       .on("error", (err) => {
         reject(err);
       })
