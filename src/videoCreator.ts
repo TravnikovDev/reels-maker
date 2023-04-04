@@ -33,6 +33,7 @@ async function createVideosFromImages(
   const tempVideos: string[] = [];
 
   for (let i = 0; i < imagePaths.length; i++) {
+    console.info(imagePaths[i]);
     const tempVideoPath = path.join("output/temp", `temp_${i}.mp4`);
     let videoDuration = durations[i + 1] - durations[i];
     if (isNaN(videoDuration)) {
