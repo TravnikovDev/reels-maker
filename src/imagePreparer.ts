@@ -21,18 +21,19 @@ export async function prepareImages(
   let imagesProcessed = 0;
 
   const images = await fs.readdir(inputDir);
-  const inputFiles = images
-    .filter((file) => /\.(jpe?g|png)$/i.test(file))
-    .map((file) => path.join(inputDir, file));
+  console.info(inputDir, images);
+  const inputFiles = images.filter((file) => /\.(jpe?g|png)$/i.test(file));
+  // .map((file) => path.join(inputDir, file));
 
   for (const inputFile of inputFiles) {
     if (imagesProcessed >= numImages) {
       break;
     }
-    const outputPath = inputFile.replace("assets/images", outputDir);
+    const wholePath = path.join(inputDir, inputFile);
+    const outputPath = path.join(outputDir, inputFile);
     imagePaths.push(outputPath);
 
-    await sharp(inputFile)
+    await sharp(wholePath)
       .resize(width, height, { fit: "cover", position: "center" })
       .jpeg({ quality: 100 })
       .toFile(outputPath);
@@ -53,27 +54,33 @@ export async function getSubdirectories(directory: string): Promise<string[]> {
     .map((item) => path.join(directory, item.name));
 }
 
-export async function promptImageSubfolderSelection(subfolders: string[]): Promise<string> {
+export async function promptImageSubfolderSelection(
+  subfolders: string[]
+): Promise<string> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
-  console.log('Please select an image subfolder:');
+  console.log("Please select an image subfolder:");
   subfolders.forEach((subfolder, index) => {
     console.log(`${index + 1}: ${subfolder}`);
   });
 
   const selectedIndex = await new Promise<number>((resolve) => {
-    rl.question('Enter the number of the subfolder: ', (answer) => {
+    rl.question("Enter the number of the subfolder: ", (answer) => {
       resolve(parseInt(answer) - 1);
     });
   });
 
   rl.close();
 
-  if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= subfolders.length) {
-    console.error('Invalid subfolder selection. Exiting...');
+  if (
+    isNaN(selectedIndex) ||
+    selectedIndex < 0 ||
+    selectedIndex >= subfolders.length
+  ) {
+    console.error("Invalid subfolder selection. Exiting...");
     process.exit(1);
   }
 

@@ -10,8 +10,6 @@ import {
 import { getSubdirectories, prepareImages, promptImageSubfolderSelection } from "./imagePreparer";
 import { createSlidingVideo } from "./videoCreator";
 
-// Выбор музыки
-// Выбор папок с картинками
 // Ввод настройки промежутка
 
 const minTimeDiff = 0.3;
