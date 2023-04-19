@@ -11,6 +11,9 @@ import { getSubdirectories, prepareImages, promptImageSubfolderSelection } from 
 import { createSlidingVideo } from "./videoCreator";
 
 // Ввод настройки промежутка
+// Add preview slide with text
+// Try to optimize audio peaks again
+// Check for transition time
 
 const minTimeDiff = 0.3;
 const width = 1080;

@@ -68,12 +68,14 @@ async function createTransitions(
   videoPaths: string[],
   outputVideoPath: string
 ): Promise<void> {
+  console.info(videoPaths, outputVideoPath);
+
   await concat({
     output: outputVideoPath,
     videos: videoPaths,
     transition: {
-      name: 'circleopen',
-      duration: 150
+      name: "circleopen",
+      duration: 200,
     },
   }).then(() => console.log("Concated..."));
 }
